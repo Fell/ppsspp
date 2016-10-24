@@ -1135,6 +1135,11 @@ int friendFinder(){
 					if (ch) {
 						ch->UpdateChat();
 					}
+					else {
+						if (g_Config.iNewChat < 50) {
+							g_Config.iNewChat += 1;
+						}
+					}
 					// Move RX Buffer
 					memmove(rx, rx + sizeof(SceNetAdhocctlChatPacketS2C), sizeof(rx) - sizeof(SceNetAdhocctlChatPacketS2C));
 
