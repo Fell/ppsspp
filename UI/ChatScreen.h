@@ -10,7 +10,7 @@ public:
 	void CreateViews() override;
 	void dialogFinished(const Screen *dialog, DialogResult result) override;
 	bool touch(const TouchInput &touch) override;
-	void update(InputState &input) override;
+	void update() override;
 	void postRender() override;
 	void UpdateChat();
 private:

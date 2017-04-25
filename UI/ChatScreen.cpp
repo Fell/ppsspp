@@ -185,8 +185,8 @@ bool ChatMenu::touch(const TouchInput &touch) {
 	return UIDialogScreen::touch(touch);
 }
 
-void ChatMenu::update(InputState &input) {
-	PopupScreen::update(input);
+void ChatMenu::update() {
+	PopupScreen::update();
 	if (updateChatScreen) {
 		UpdateChat();
 	}
