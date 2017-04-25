@@ -54,6 +54,7 @@
 #include "Core/SaveState.h"
 #include "Core/MIPS/MIPS.h"
 #include "Core/HLE/__sceAudio.h"
+#include "Core/HLE/proAdhoc.h"
 
 #include "UI/ui_atlas.h"
 #include "UI/BackgroundAudio.h"
@@ -70,6 +71,7 @@
 #include "UI/GameSettingsScreen.h"
 #include "UI/InstallZipScreen.h"
 #include "UI/ProfilerDraw.h"
+#include "UI/ChatScreen.h"
 
 #if defined(_WIN32) && !PPSSPP_PLATFORM(UWP)
 #include "Windows/MainWindow.h"
@@ -82,10 +84,11 @@
 AVIDump avi;
 #endif
 
+UI::ChoiceWithValueDisplay *chatButtons;
+
 static bool frameStep_;
 static int lastNumFlips;
 static bool startDumping;
-
 static void __EmuScreenVblank()
 {
 	if (frameStep_ && lastNumFlips != gpuStats.numFlips)
@@ -379,6 +382,20 @@ void EmuScreen::sendMessage(const char *message, const char *value) {
 		} else {
 			gstate_c.skipDrawReason &= ~SKIPDRAW_WINDOW_MINIMIZED;
 		}
+	} else if (!strcmp(message, "chat screen")) {
+		releaseButtons();
+#if defined(USING_WIN_UI)
+		//temporary workaround for hotkey its freeze the ui when open chat screen using hotkey and native keyboard is enable
+		if (g_Config.bBypassOSKWithKeyboard) {
+			osm.Show("Disable windows native keyboard options to use ctrl + c hotkey", 2.0f);
+		} else {
+			chatButtons->SetVisibility(UI::V_GONE);
+			screenManager()->push(new ChatMenu());
+		}
+#else
+		chatButtons->SetVisibility(UI::V_GONE);
+		screenManager()->push(new ChatMenu());
+#endif
 	}
 }
 
@@ -779,11 +796,44 @@ void EmuScreen::processAxis(const AxisInput &axis, int direction) {
 
 void EmuScreen::CreateViews() {
 	using namespace UI;
+	I18NCategory *sc = GetI18NCategory("Screen");
 	const Bounds &bounds = screenManager()->getUIContext()->GetBounds();
 	InitPadLayout(bounds.w, bounds.h);
 	root_ = CreatePadLayout(bounds.w, bounds.h, &pauseTrigger_);
 	if (g_Config.bShowDeveloperMenu) {
 		root_->Add(new Button("DevMenu"))->OnClick.Handle(this, &EmuScreen::OnDevTools);
+	}
+	if (g_Config.bEnableNetworkChat) {
+		switch (g_Config.iChatButtonPosition) {
+		case 0:
+			chatButtons = new ChoiceWithValueDisplay(&newChat, sc->T("Chat"), new AnchorLayoutParams(130, WRAP_CONTENT, 80, NONE, NONE, 50, true));
+			break;
+		case 1:
+			chatButtons = new ChoiceWithValueDisplay(&newChat, sc->T("Chat"), new AnchorLayoutParams(130, WRAP_CONTENT, bounds.centerX(), NONE, NONE, 50, true));
+			break;
+		case 2:
+			chatButtons = new ChoiceWithValueDisplay(&newChat, sc->T("Chat"), new AnchorLayoutParams(130, WRAP_CONTENT, NONE, NONE, 80, 50, true));
+			break;
+		case 3:
+			chatButtons = new ChoiceWithValueDisplay(&newChat, sc->T("Chat"), new AnchorLayoutParams(130, WRAP_CONTENT, 80, 50, NONE, NONE, true));
+		case 4:
+			chatButtons = new ChoiceWithValueDisplay(&newChat, sc->T("Chat"), new AnchorLayoutParams(130, WRAP_CONTENT, bounds.centerX(), 50, NONE, NONE, true));
+			break;
+		case 5:
+			chatButtons = new ChoiceWithValueDisplay(&newChat, sc->T("Chat"), new AnchorLayoutParams(130, WRAP_CONTENT, NONE, 50, 80, NONE, true));
+			break;
+		case 6:
+			chatButtons = new ChoiceWithValueDisplay(&newChat, sc->T("Chat"), new AnchorLayoutParams(130, WRAP_CONTENT, 80, bounds.centerY(), NONE, NONE, true));
+			break;
+		case 7:
+			chatButtons = new ChoiceWithValueDisplay(&newChat, sc->T("Chat"), new AnchorLayoutParams(130, WRAP_CONTENT, NONE, bounds.centerY(), 80, NONE, true));
+			break;
+		default:
+			chatButtons = new ChoiceWithValueDisplay(&newChat, sc->T("Chat"), new AnchorLayoutParams(130, WRAP_CONTENT, 80, NONE, NONE, 50, true));
+			break;
+		}
+
+		root_->Add(chatButtons)->OnClick.Handle(this, &EmuScreen::OnChat);
 	}
 	saveStatePreview_ = new AsyncImageFileView("", IS_FIXED, nullptr, new AnchorLayoutParams(bounds.centerX(), 100, NONE, NONE, true));
 	saveStatePreview_->SetFixedSize(160, 90);
@@ -800,6 +850,13 @@ UI::EventReturn EmuScreen::OnDevTools(UI::EventParams &params) {
 	if (params.v)
 		devMenu->SetPopupOrigin(params.v);
 	screenManager()->push(devMenu);
+	return UI::EVENT_DONE;
+}
+
+UI::EventReturn EmuScreen::OnChat(UI::EventParams &params) {
+	releaseButtons();
+	if(chatButtons->GetVisibility() == UI::V_VISIBLE) chatButtons->SetVisibility(UI::V_GONE);
+	screenManager()->push(new ChatMenu());
 	return UI::EVENT_DONE;
 }
 
@@ -891,6 +948,7 @@ void EmuScreen::update() {
 			}
 		}
 	}
+
 }
 
 void EmuScreen::checkPowerDown() {

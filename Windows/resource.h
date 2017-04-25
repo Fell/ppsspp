@@ -333,6 +333,7 @@
 #define ID_FILE_USEFFV1                  40166
 #define ID_FILE_DUMPAUDIO                40167
 #define ID_HELP_GITHUB                   40168
+#define ID_EMULATION_CHAT                40168
 
 // Dummy option to let the buffered rendering hotkey cycle through all the options.
 #define ID_OPTIONS_BUFFEREDRENDERINGDUMMY 40500
